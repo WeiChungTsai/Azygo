@@ -28,21 +28,15 @@ Intention: As a benign reviewer, your approach to reviewing is guided by a genui
 
 （原版也支援 not-knowledgeable / lazy / mean 等 persona，可用來做壓力測試：把對應段落換成負面描述即可。）
 
-## 指示（原文）
+## 指示（改寫自原版）
+
+> 原版要求審稿人先輸出一段 `THOUGHT:`（寫出推理過程）再給 JSON。在 Claude 上，要求模型輸出自己的推理過程會被安全機制判定為 reasoning extraction 而中止，所以**不要**要求 THOUGHT / 推理過程 / chain-of-thought。改為只輸出 JSON，並用 `Justification` 欄位寫簡短的審稿理由。給 reviewer subagent 的 prompt 也不要加「先思考再回答」「說明你的推理」之類的字眼。
 
 ~~~~text
-Respond in the following format:
-THOUGHT:
-<THOUGHT>
-REVIEW JSON:
-```json
-<JSON>
-```
-In <THOUGHT>, first briefly discuss your intuitions and reasoning for the evaluation.
-Detail your high-level arguments, necessary choices and desired outcomes of the review.
-Do not make generic comments here, but be specific to your current paper.
-Treat this as the note-taking phase of your review.
-In <JSON>, provide the review in JSON format with the following fields in the order:
+Respond with a single JSON object inside a ```json code block and nothing else.
+Be specific to this paper; avoid generic comments.
+Provide the review in JSON format with the following fields in the order:
+- "Justification": 2-4 sentences stating the main grounds for your overall rating.
 - "Summary": A summary of the paper content and its contributions.
 - "Strengths": A list of strengths of the paper.
 - "Weaknesses": A list of weaknesses of the paper.

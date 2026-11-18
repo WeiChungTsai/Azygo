@@ -96,7 +96,7 @@ description: Turn raw research materials (an idea/method note plus an experiment
 ### Step 4 — Content Refinement（審稿把關迴圈）
 依 `references/05-refinement-agent.md` 與 `references/06-reviewer.md`：
 1. `bash scripts/compile.sh latex paper` 編譯 v0（無 TeX 環境時見該檔說明：改用 tectonic 或請使用者上傳 Overleaf；此時以 .tex 文字審稿）。
-2. 以**獨立的 reviewer subagent**（看不到你的寫作推理，只拿到論文文字）產生 3 份審稿 → meta-review → 各分數取平均。
+2. 以**獨立的 reviewer subagent**（看不到你的寫作推理，只拿到論文文字）產生 3 份審稿 → meta-review → 各分數取平均。reviewer prompt 只要求輸出審稿 JSON，**不要**要求它寫出思考/推理過程（會被安全機制當成 reasoning extraction 而中止）。若 subagent 仍被中止，改用同一份 prompt 換模型重試一次，不要自己代替 reviewer 打分。
 3. 依審稿修訂（只改呈現，不加新實驗）→ 編譯 → 再審 → `python3 scripts/refine_gate.py refinement/review_v{i-1}.json refinement/review_v{i}.json --worklog refinement/worklog.json --round {i}` 決定 ACCEPT（exit 0）/ REVERT（exit 1）：
    - Overall 上升 → 接受、繼續；Overall 下降 → 回退、停止；
    - Overall 持平 → 子軸（Originality…Contribution）總增益 ≥ 總損失則接受、繼續，否則回退、停止。
