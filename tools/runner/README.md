@@ -1,5 +1,8 @@
 # 醫學論文評析工作台 — 本機 runner
 
+> 完整的使用說明在 [`docs/使用說明.md`](../../docs/使用說明.md)，伺服器跑起來後也可以在
+> 「使用說明」分頁直接讀。這份 README 只講 runner 本身。
+
 在自己的電腦上跑的小伺服器，把 `medical-manuscript-review` skill 的四項服務做成可點擊的流程：
 按「開始執行」就 spawn 一個 `claude -p`，把輸出即時串到瀏覽器，同時寫成 run log。
 

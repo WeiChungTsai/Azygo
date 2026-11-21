@@ -113,6 +113,41 @@ code{font-family:var(--mono);font-size:.9em}
 
 textarea.prompt{font-family:var(--mono);font-size:12px;line-height:1.65;min-height:190px;resize:vertical}
 
+/* ── markdown ────────────────────────────────────── */
+.md{font-size:13.5px;line-height:1.75;color:#cdd9e5;overflow-wrap:break-word}
+.md h1{font-size:20px;margin:24px 0 10px;color:var(--fg)}
+.md h2{font-size:16.5px;margin:22px 0 9px;padding-top:13px;border-top:1px solid var(--line);color:var(--fg)}
+.md h3{font-size:14.5px;margin:18px 0 7px;color:var(--fg)}
+.md h4{font-size:13.5px;margin:14px 0 6px;color:var(--muted)}
+.md h1:first-child,.md h2:first-child{margin-top:0;border-top:none;padding-top:0}
+.md p{margin:0 0 11px}
+.md ul,.md ol{margin:0 0 11px;padding-left:21px}
+.md li+li{margin-top:3px}
+.md strong{color:var(--fg);font-weight:600}
+.md code{background:#1a2230;padding:1.5px 5px;border-radius:4px;color:#9ecbff}
+.md blockquote{margin:0 0 11px;padding:9px 13px;border-left:3px solid var(--line-2);
+  background:var(--panel-2);border-radius:0 7px 7px 0;color:var(--muted)}
+.md blockquote p:last-child{margin-bottom:0}
+.md hr{border:none;border-top:1px solid var(--line);margin:20px 0}
+.md a{color:var(--accent)}
+.tw{overflow-x:auto;margin:0 0 13px;border:1px solid var(--line);border-radius:9px}
+.md table{border-collapse:collapse;width:100%;font-size:12.5px}
+.md th,.md td{border-bottom:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+.md th{background:var(--panel-2);font-weight:600;color:var(--fg);white-space:nowrap}
+.md tr:last-child td{border-bottom:none}
+.mdwrap{max-height:66vh;overflow-y:auto;padding-right:6px}
+
+/* ── outputs ─────────────────────────────────────── */
+.flist{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;margin-bottom:14px}
+.frow{display:flex;gap:10px;align-items:center;padding:8px 11px;border:1px solid var(--line);
+  border-radius:8px;background:#0a0d13;text-align:left;width:100%}
+.frow:hover{border-color:var(--line-2)}
+.frow.sel{border-color:var(--accent);background:#101c2e}
+.frow .fn{flex:1;min-width:0;font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
+.frow .fm{font-size:11px;color:var(--dim);white-space:nowrap}
+.frow .ft{font-size:10.5px;padding:1px 7px;border-radius:999px;border:1px solid var(--line-2);
+  color:var(--muted);white-space:nowrap}
+
 /* ── log ─────────────────────────────────────────── */
 .logbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
 .logbar select{width:auto;min-width:230px}
@@ -236,7 +271,48 @@ const PERMS=[
 ];
 
 let S={projects:[],running:[],runs:[]}, sel=null, tab='s3', logRun=null, es=null,
-    showTools=true, lines=[], err='', ticking=null, openedRun=null, gen=0, ENV=[];
+    showTools=true, lines=[], err='', ticking=null, openedRun=null, gen=0, ENV=[],
+    outFiles=null, outSel=null, outText=null, outFor=null, helpText=null;
+
+const esc=x=>String(x).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function mdInline(x){
+  return esc(x)
+    .replace(/`([^`]+)`/g,(_,a)=>`<code>${a}</code>`)
+    .replace(/\*\*([^*]+)\*\*/g,(_,a)=>`<strong>${a}</strong>`)
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,(_,t,h)=>`<a href="${h}" target="_blank" rel="noopener">${t}</a>`);
+}
+function md2html(src){
+  const L=String(src).replace(/\r/g,'').split('\n');let out='',i=0;
+  const row=l=>l.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim());
+  while(i<L.length){
+    const l=L[i];
+    if(!l.trim()){i++;continue}
+    let m;
+    if(m=l.match(/^(#{1,6})\s+(.*)$/)){out+=`<h${m[1].length}>${mdInline(m[2])}</h${m[1].length}>`;i++;continue}
+    if(/^\s*(---+|___+)\s*$/.test(l)){out+='<hr>';i++;continue}
+    if(/^\s*```/.test(l)){i++;let c='';while(i<L.length&&!/^\s*```/.test(L[i])){c+=L[i]+'\n';i++}i++;
+      out+=`<div class="tw"><pre style="margin:0;padding:11px;font-family:var(--mono);font-size:12px">${esc(c)}</pre></div>`;continue}
+    if(/^\s*\|.*\|\s*$/.test(l)&&i+1<L.length&&/^\s*\|[\s:|-]+\|\s*$/.test(L[i+1])){
+      const head=row(l);i+=2;let body='';
+      while(i<L.length&&/^\s*\|.*\|\s*$/.test(L[i])){body+='<tr>'+row(L[i]).map(c=>`<td>${mdInline(c)}</td>`).join('')+'</tr>';i++}
+      out+=`<div class="tw"><table><thead><tr>${head.map(c=>`<th>${mdInline(c)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;continue}
+    if(/^\s*>/.test(l)){let b='';while(i<L.length&&/^\s*>/.test(L[i])){b+=L[i].replace(/^\s*>\s?/,'')+'\n';i++}
+      out+=`<blockquote>${md2html(b)}</blockquote>`;continue}
+    if(m=l.match(/^(\s*)([-*+]|\d+[.)])\s+/)){
+      const ord=/\d/.test(m[2]),tag=ord?'ol':'ul';const items=[];
+      const isItem=x=>{const y=x&&x.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);return y&&(/\d/.test(y[2])===ord)?y:null};
+      while(i<L.length){
+        const mm=isItem(L[i]);
+        if(mm){items.push(mm[3]);i++;continue}
+        if(!L[i].trim()){let j=i;while(j<L.length&&!L[j].trim())j++;if(isItem(L[j])){i=j;continue}break}
+        if(items.length&&!/^\s*(#{1,6}\s|\||>|---|```)/.test(L[i])){items[items.length-1]+='\n'+L[i].trim();i++;continue}
+        break}
+      out+=`<${tag}>`+items.map(t=>`<li>${mdInline(t).replace(/\n/g,'<br>')}</li>`).join('')+`</${tag}>`;continue}
+    const par=[];while(i<L.length&&L[i].trim()&&!/^\s*(#{1,6}\s|[-*+]\s|\d+[.)]\s|>|\||---|```)/.test(L[i])){par.push(L[i].trim());i++}
+    if(par.length)out+=`<p>${mdInline(par.join(' '))}</p>`;else i++;
+  }
+  return out;
+}
 
 const projOf=id=>S.projects.find(p=>p.id===id);
 const runningFor=id=>S.running.find(r=>r.projectId===id);
@@ -262,7 +338,7 @@ function paintRail(){
     s.append(document.createTextNode((p.journal||'未指定期刊')+' · '));
     s.append(r?Object.assign(el('span','live'),{textContent:'執行中：'+r.serviceName}):el('span',null,'閒置'));
     b.append(s);
-    b.onclick=()=>{sel=p.id;logRun=null;paint()};
+    b.onclick=()=>{sel=p.id;logRun=null;outFiles=null;outSel=null;outText=null;outFor=null;paint()};
     h.append(b);
   });
   const e=$('#envlist'); e.innerHTML='';
@@ -292,15 +368,19 @@ function paint(){
 
   const tabs=el('div','tabs');tabs.setAttribute('role','tablist');
   const T=[...SERVICES.map(s=>({k:'s'+s.n,l:`${'①②③④'[[3,4,1,2].indexOf(s.n)]} ${s.name}`})),
-           {k:'log',l:'執行紀錄'},{k:'set',l:'材料與設定'}];
+           {k:'out',l:'成果'},{k:'log',l:'執行紀錄'},{k:'set',l:'材料與設定'},{k:'help',l:'使用說明'}];
   T.forEach(t=>{const b=el('button','tab');b.setAttribute('role','tab');
     b.setAttribute('aria-selected',t.k===tab);b.append(document.createTextNode(t.l));
     if(t.k==='log'&&S.runs.filter(r=>r.projectId===p.id).length)
       b.append(el('span','badge'+(run?' on':''),String(S.runs.filter(r=>r.projectId===p.id).length)));
+    if(t.k==='out'&&outFor===p.id&&outFiles&&outFiles.length)
+      b.append(el('span','badge',String(outFiles.length)));
     b.onclick=()=>{tab=t.k;paint()};tabs.append(b)});
   m.append(tabs);
 
   if(tab==='log') m.append(logPanel(p));
+  else if(tab==='out') m.append(outputsPanel(p));
+  else if(tab==='help') m.append(helpPanel());
   else if(tab==='set') m.append(settingsCard(p),newProjectCard(false));
   else {
     const s=SERVICES.find(x=>'s'+x.n===tab)||SERVICES[0];
@@ -564,6 +644,78 @@ function renderLog(){
   if(!n)box.append(el('div','empty','（這次執行還沒有可顯示的輸出）'));
   const bs=$('#bstep'); if(bs&&step)bs.textContent=step;
   if(atBottom)box.scrollTop=box.scrollHeight;
+}
+
+/* ── outputs ───────────────────────────────────── */
+function outputsPanel(p){
+  const c=el('div','card');
+  const head=el('div');head.style.cssText='display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px';
+  head.append(el('h3',null,'成果'));
+  const sp=el('span');sp.style.flex='1';head.append(sp);
+  const reveal=el('button','btn','在檔案總管開啟資料夾');
+  reveal.onclick=()=>api('/api/reveal',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({projectId:p.id})}).catch(e=>{err=e.message;paint()});
+  const rl=el('button','btn','重新整理');
+  rl.onclick=()=>{outFiles=null;outText=null;outSel=null;loadOutputs(p.id)};
+  head.append(reveal,rl);
+  c.append(head);
+  c.append(el('p','lede','流程產生的檔案都在你的論文資料夾裡。文字檔可以直接在這裡讀，Word 與圖檔請用「在檔案總管開啟」。'));
+
+  if(outFor!==p.id||!outFiles){ c.append(el('div','empty','讀取資料夾…')); loadOutputs(p.id); return c }
+  if(!outFiles.length){ c.append(el('div','empty','這個資料夾還沒有 .md / .docx / .pptx 之類的檔案。')); return c }
+
+  const list=el('div','flist');
+  outFiles.forEach(f=>{
+    const r=el('button','frow'+(f.name===outSel?' sel':''));
+    r.append(el('span','ft',f.ext.replace('.','').toUpperCase()));
+    r.append(el('span','fn',f.name));
+    r.append(el('span','fm',fmtSize(f.size)+' · '+new Date(f.mtime).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})));
+    r.onclick=()=>{
+      if(f.kind!=='doc'){ api('/api/reveal',{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({projectId:p.id,name:f.name})}).catch(e=>{err=e.message;paint()}); return }
+      outSel=f.name;outText=null;paint();
+      api(`/api/file?project=${encodeURIComponent(p.id)}&name=${encodeURIComponent(f.name)}`)
+        .then(j=>{outText=j.text;paint()}).catch(e=>{outText='讀取失敗：'+e.message;paint()});
+    };
+    list.append(r);
+  });
+  c.append(list);
+
+  if(outSel){
+    const d=el('div','card');d.style.marginBottom='0';
+    const h=el('div');h.style.cssText='display:flex;gap:10px;align-items:center;margin-bottom:10px';
+    h.append(Object.assign(el('h3'),{textContent:outSel,style:'font-family:var(--mono);font-size:13px'}));
+    const s2=el('span');s2.style.flex='1';h.append(s2);
+    const rv=el('button','btn','在檔案總管顯示');
+    rv.onclick=()=>api('/api/reveal',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({projectId:p.id,name:outSel})}).catch(()=>{});
+    h.append(rv);d.append(h);
+    const w=el('div','mdwrap');
+    if(outText==null) w.append(el('div','empty','載入中…'));
+    else { const md=el('div','md'); md.innerHTML=md2html(outText); w.append(md) }
+    d.append(w);c.append(d);
+  }
+  return c;
+}
+function fmtSize(n){return n<1024?n+' B':n<1048576?(n/1024).toFixed(0)+' KB':(n/1048576).toFixed(1)+' MB'}
+function loadOutputs(pid){
+  api('/api/outputs?project='+encodeURIComponent(pid))
+    .then(j=>{outFiles=j.files;outFor=pid;paint()})
+    .catch(e=>{outFiles=[];outFor=pid;err=e.message;paint()});
+}
+
+/* ── help ──────────────────────────────────────── */
+function helpPanel(){
+  const c=el('div','card');
+  if(helpText==null){
+    c.append(el('div','empty','載入使用說明…'));
+    api('/api/help').then(j=>{helpText=j.text;paint()})
+      .catch(e=>{helpText='# 找不到使用說明\n\n'+e.message+'\n\n請確認 `docs/使用說明.md` 存在，或從 repo 根目錄啟動伺服器。';paint()});
+    return c;
+  }
+  const w=el('div','mdwrap');const md=el('div','md');md.innerHTML=md2html(helpText);
+  w.append(md);c.append(w);
+  return c;
 }
 
 /* ── project forms ─────────────────────────────── */
