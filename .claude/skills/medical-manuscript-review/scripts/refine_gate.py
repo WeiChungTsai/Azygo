@@ -136,6 +136,18 @@ def main():
     else:
         print("  → 回退這一輪的修改並停止。上一版才是要送出的版本。")
 
+    # A panel of three 1-5 scorers resolves about a third of a point. Changes
+    # smaller than that are inside the noise: the same reviewer re-reading an
+    # unchanged section will often move an axis by a whole point. Say so rather
+    # than let a tie-break read as evidence of improvement.
+    n_rev = max(prev["n"], cur["n"])
+    resolution = 1.0 / n_rev
+    small = abs(d_overall) < EPS and max((abs(v) for v in deltas.values()), default=0) <= resolution + EPS
+    if small:
+        print(f"  ⚠ 這一輪的所有變化都在 ±{resolution:.2f} 以內，也就是 {n_rev} 位評分者中"
+              f"一位移動一分的幅度。以 {n_rev} 位評分者的解析度，這等於「測不出差別」，"
+              f"不是「有進步」。要分辨這麼小的差異，得每輪多跑幾組 reviewer 取平均。")
+
     if a.worklog:
         entry = {
             "round": a.round, "at": datetime.now(timezone.utc)
