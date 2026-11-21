@@ -164,6 +164,9 @@ Default file names:
 - `03_reviewer_panel.md` (service 4)
 - `04_<name>_language_edited.docx` + `04_language_change_log.md` (service 1)
 - `05_<name>_<journal>_formatted.docx` + `05_<journal>_compliance_checklist.md` (service 2)
+- `06_response_to_reviewers.docx` / `.md` - the point-by-point reply, built with
+  `scripts/make_response_template.py`. Offer it after service 4, and whenever the user
+  brings back a real decision letter; `references/reviewer-panel.md` says how to fill it.
 
 For .docx output with tracked changes, use the `docx` skill if one is available in the
 session - it handles tracked-change markup properly. If not, produce the clean edited .docx

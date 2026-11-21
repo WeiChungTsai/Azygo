@@ -128,6 +128,35 @@ and why, and how the authors should handle it in the response.>
 alternative response.>
 ```
 
-Offer, as a follow-up, to draft a point-by-point **response-to-reviewers** template with the
-reviewers' comments already laid out and space for replies and manuscript changes - this is
-the natural next step once the author has revised.
+## Response-to-reviewers template
+
+Offer this as the follow-up, and build it with `scripts/make_response_template.py`, which
+takes a JSON of the comments and emits both a `.docx` (what journals want uploaded) and a
+`.md` for working on the text. The script's docstring gives the schema; the fields that earn
+their keep are:
+
+- **`issue_map`** - the same objection usually arrives from two or three reviewers at once.
+  Answering it separately each time is how authors contradict themselves in front of an
+  editor who is reading all three replies side by side. Map each underlying issue to the
+  comments that raise it, nominate one place to answer it in full, and cross-reference the
+  rest ("Please see our response to Reviewer 1, Major comment 2").
+- **`draft`** - write the reply out in full wherever an honest one can be written now. For
+  anything that is a straightforward correction - a wrong cross-reference, a duplicated
+  citation, an ethics statement citing the wrong declaration - the author should not have to
+  compose prose. Leave it empty only where the answer depends on data or a decision you do
+  not have.
+- **`todo`** - what the author must decide or look up, in their language. Be specific about
+  which original record they need to go back to.
+- **`fallback`** - for every request that needs new data, the defensible answer if it cannot
+  be done. Authors panic about these; the honest reply ("we could not do X, we have therefore
+  removed claim Y and stated the limitation") is almost always available and almost always
+  accepted. Spelling it out in advance stops the author from overclaiming under pressure.
+
+Two things to get right in the drafts. Report what the data actually show, including
+comparisons that turn out non-significant - a reviewer who recomputed a number will recompute
+it again on the revision. And where a reviewer is simply correct, say so plainly and fix it;
+arguing a losing point costs more credibility than the point is worth.
+
+The same template serves before submission as rehearsal for a simulated panel, and after a
+real decision letter arrives - the author replaces the quoted comments with the journal's own
+text and keeps the structure. Say so, so they do not treat it as single-use.
