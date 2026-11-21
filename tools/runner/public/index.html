@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>醫學論文評析工作台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#0b0e14; --panel:#11161f; --panel-2:#151b26; --rail:#0d1117;
+  --line:#222b38; --line-2:#2e3a4a;
+  --fg:#e6edf3; --muted:#8b98a8; --dim:#5f6d7e;
+  --accent:#4a9eff; --ok:#3fb950; --warn:#d29922; --bad:#f85149; --purple:#a371f7;
+  --sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;
+  line-height:1.6;-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
+h1,h2,h3,h4{margin:0;font-weight:600;line-height:1.3}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--fg);background:#0a0d13;border:1px solid var(--line-2);
+  border-radius:7px;padding:7px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+code{font-family:var(--mono);font-size:.9em}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#2a3444;border-radius:6px}
+
+.shell{display:grid;grid-template-columns:276px minmax(0,1fr);min-height:100%}
+.rail{background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:18px;
+  padding:20px 16px 16px;position:sticky;top:0;max-height:100vh;overflow-y:auto}
+.main{min-width:0;padding:22px 24px 70px}
+@media(max-width:880px){.shell{grid-template-columns:1fr}
+  .rail{position:static;max-height:none;border-right:none;border-bottom:1px solid var(--line)}}
+
+.brand{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}
+.brand .dot{width:9px;height:9px;border-radius:3px;background:var(--accent);flex:none}
+.flow{color:var(--dim);font-size:11.5px;line-height:1.7;margin-top:6px}
+.flow b{color:var(--muted);font-weight:500}
+.railsec{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);font-weight:600}
+
+.pcard{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:10px 12px;
+  display:grid;grid-template-columns:minmax(0,1fr);gap:3px;text-align:left;width:100%}
+.pcard:hover{border-color:var(--line-2)}
+.pcard.sel{border-color:var(--accent);background:linear-gradient(180deg,#132033,#111722)}
+.pcard .t{font-weight:600;font-size:13.5px}
+.pcard .s{font-size:11.5px;color:var(--muted)}
+.pcard .s .live{color:var(--accent)}
+.newbtn{display:block;width:100%;border:1px dashed var(--line-2);border-radius:9px;padding:9px;
+  color:var(--muted);font-size:12.5px;text-align:center}
+.newbtn:hover{border-color:var(--accent);color:var(--accent)}
+
+.env{margin-top:auto;display:grid;grid-template-columns:minmax(0,1fr);gap:5px}
+.envrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.envrow .nm{flex:1;min-width:0}
+.y{color:var(--ok)}.n{color:var(--bad)}.q{color:var(--warn)}
+
+.phead{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:3px}
+.phead h1{font-size:23px;letter-spacing:-.02em}
+.phead .meta{color:var(--muted);font-size:13px}
+.pdir{color:var(--dim);font-size:12px;font-family:var(--mono);margin-bottom:16px}
+
+.banner{border:1px solid var(--accent);background:linear-gradient(180deg,#122033,#101722);
+  border-radius:11px;padding:14px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+.banner.idle{border-color:var(--line);background:var(--panel)}
+.banner .bi{flex:1;min-width:230px}
+.banner h3{font-size:14.5px;margin-bottom:3px}
+.banner p{margin:0;color:var(--muted);font-size:12.5px}
+.banner .step{font-family:var(--mono);font-size:12.5px;color:var(--fg);margin:3px 0}
+.bactions{display:flex;gap:8px;flex:none}
+.btn{border:1px solid var(--line-2);border-radius:8px;padding:6px 13px;font-size:12.5px;color:var(--muted)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.danger{border-color:#5c2626;color:var(--bad)}
+.btn.danger:hover{background:#2a1414}
+.btn.primary{border-color:var(--accent);color:var(--accent);background:#102039}
+.btn.primary:hover{background:#15294a}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(218px,1fr));gap:12px;margin-bottom:22px}
+.stage{border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:13px 14px;
+  display:grid;grid-template-columns:minmax(0,1fr);gap:6px;align-content:start}
+.stage.run{border-color:var(--accent)}
+.stage.done{border-color:#1d4a2b}
+.stage .n{font-size:11px;color:var(--dim)}
+.stage .nm{font-size:15px;font-weight:600}
+.stage .d{font-size:11.5px;color:var(--muted);line-height:1.5}
+.stage .row{display:flex;align-items:center;gap:8px;margin-top:3px}
+.stage .st{font-size:12px;display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.pip{width:7px;height:7px;border-radius:50%;flex:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.pip.on{background:var(--accent);animation:pulse 1.4s infinite}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:9px 13px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;flex:none}
+.tab:hover{color:var(--fg)}
+.tab[aria-selected=true]{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.badge{display:inline-block;min-width:17px;padding:0 6px;border-radius:9px;background:#2a3444;
+  font-size:10.5px;font-weight:600;margin-left:5px;line-height:17px}
+.badge.on{background:#10203a;color:var(--accent)}
+
+.card{border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:16px 18px;margin-bottom:16px}
+.card>h3{font-size:15px;margin-bottom:10px}
+.lede{color:var(--muted);font-size:13px;margin:0 0 12px}
+.field{display:grid;gap:5px;margin-bottom:12px}
+.field label{font-size:12px;color:var(--muted)}
+.field .hint{font-size:11.5px;color:var(--dim)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+
+textarea.prompt{font-family:var(--mono);font-size:12px;line-height:1.65;min-height:190px;resize:vertical}
+
+/* ── log ─────────────────────────────────────────── */
+.logbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.logbar select{width:auto;min-width:230px}
+.chk{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.chk input{width:auto}
+.log{border:1px solid var(--line);border-radius:10px;background:#0a0d13;overflow:hidden;
+  max-height:62vh;overflow-y:auto}
+.ev{border-bottom:1px solid #161d28;padding:9px 13px;font-size:12.5px}
+.ev:last-child{border-bottom:none}
+.ev.band{background:#101a2b;border-left:3px solid var(--accent);font-weight:600;font-family:var(--mono);
+  color:var(--fg);padding:8px 13px}
+.ev.sys{color:var(--accent);font-size:12px}
+.ev.txt{color:#cdd9e5;white-space:pre-wrap}
+.ev.tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:pre-wrap}
+.ev.tool b{color:#9ecbff;font-weight:600}
+.ev.res{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:pre-wrap;
+  max-height:9em;overflow:hidden;position:relative}
+.ev.res.open{max-height:none}
+.ev.err{color:var(--bad);font-family:var(--mono);font-size:11.5px;white-space:pre-wrap}
+.ev.fin{color:var(--ok);font-weight:600}
+.ev.fin.bad{color:var(--bad)}
+.tiny{font-size:11px;color:var(--dim);margin-left:8px;font-weight:400}
+.empty{padding:34px;text-align:center;color:var(--dim);font-size:13px}
+.err-banner{border:1px solid #5c2626;background:#1d1113;color:#ffb4ac;border-radius:9px;
+  padding:10px 13px;font-size:12.5px;margin-bottom:14px}
+.warnbox{border:1px solid #4a3a14;background:#1a1609;border-radius:9px;padding:10px 13px;
+  font-size:12.5px;color:#f0c674;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="rail">
+    <div>
+      <div class="brand"><span class="dot"></span>醫學論文評析工作台</div>
+      <div class="flow"><b>稿件</b> → <b>嚴格評析</b> → <b>三位 reviewer</b> → <b>語言編修</b> → <b>期刊格式</b> → <b>投稿</b></div>
+    </div>
+    <div style="display:grid;gap:9px">
+      <div class="railsec">論文</div>
+      <div id="plist" style="display:grid;gap:7px"></div>
+      <button class="newbtn" id="newbtn">＋ 新論文</button>
+    </div>
+    <div class="env">
+      <div class="railsec" style="margin-bottom:5px">環境</div>
+      <div id="envlist"></div>
+      <div style="font-size:11px;color:var(--dim);margin-top:10px" id="srvnote"></div>
+    </div>
+  </aside>
+
+  <main class="main" id="main"></main>
+</div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n};
+const api=async(p,o)=>{const r=await fetch(p,o);const j=await r.json().catch(()=>({error:'bad response'}));
+  if(!r.ok)throw new Error(j.error||('HTTP '+r.status));return j};
+
+const SERVICES=[
+ {n:3,key:'appraisal',name:'嚴格評析',
+  desc:'以基礎與臨床醫學角度剖析邏輯，產出 10–20 個 Major / Minor concerns。',
+  prompt:`[STAGE 嚴格評析]
+請用 medical-manuscript-review skill 的 Service 3，對這個資料夾裡的稿件做嚴格評析。
+
+每進入一個步驟，先單獨印一行 [STEP] 加上步驟名稱，方便我在執行紀錄裡追蹤。
+
+1. 擷取所有檔案（本文、supplementary、圖檔 pptx），印出 manuscript profile
+2. 實際看過每一張圖的渲染圖，不要只讀文字
+3. 跨圖列出每組 n、重算所有可重算的統計、檢查時間窗口是否符合該物種生理、
+   檢查硬體設定與分析設定是否相容
+4. 產出 Major / Minor concerns，每條要有位置、為何重要、具體要做什麼
+5. 寫成 02_critical_appraisal.md
+
+評析用繁體中文，引用稿件原文與專有名詞保持英文。`},
+ {n:4,key:'panel',name:'三位 reviewer',
+  desc:'三位不同專長的審稿人各自獨立評讀，再加主編綜合判斷。',
+  prompt:`[STAGE 三位 reviewer]
+請用 medical-manuscript-review skill 的 Service 4，對這個資料夾裡的稿件做三位 reviewer 評讀。
+
+每進入一個步驟，先單獨印一行 [STEP] 加上步驟名稱。
+
+1. 三位 reviewer 用各自獨立的 subagent，不要讓他們看到彼此的意見，
+   也不要看到 Service 3 的評析
+2. 每位都要讀圖檔的渲染圖
+3. 每位要有 recommendation、scores、給編輯的保密意見
+4. 最後加主編綜合判斷：共識項目表、意見分歧之處、決定成敗的關鍵、修改路線圖
+5. 寫成 03_reviewer_panel.md
+
+審稿意見用英文，中文重點摘要放在每份後面。`},
+ {n:1,key:'language',name:'語言編修',
+  desc:'專業醫學英文與文法修訂，不改動任何數字或結論強度。',
+  prompt:`[STAGE 語言編修]
+請用 medical-manuscript-review skill 的 Service 1，對這個資料夾裡的稿件做語言編修。
+
+每進入一個步驟，先單獨印一行 [STEP] 加上步驟名稱。
+
+1. 產出 tracked changes 的 .docx，加上 change log（原文 → 修改後 → 理由）
+2. 不要改動任何數字、P 值、樣本數，也不要改變結論強度
+3. 語意不清的地方用 author query 標出來問我，不要自己猜
+4. 圖說、表標題與 supplementary 的文字也要一起編修
+
+工作在複本上，不要覆蓋我原本的檔案。`},
+ {n:2,key:'format',name:'期刊格式',
+  desc:'依目標期刊現行 author guidelines 調整結構、字數與 reference 格式。',
+  prompt:`[STAGE 期刊格式]
+請用 medical-manuscript-review skill 的 Service 2，把這個資料夾裡的稿件改成目標期刊的格式。
+
+每進入一個步驟，先單獨印一行 [STEP] 加上步驟名稱。
+
+1. 即時抓取該期刊現行的 author guidelines，抓不到就停下來告訴我
+2. 整理成需求表（字數、abstract 結構、reference 格式、圖表上限、必要聲明）
+3. 套用到稿件的複本
+4. Reference 逐筆用 PubMed/Crossref 查證，查不到的標 [VERIFY]，
+   不要自行補上卷期頁碼或 DOI
+5. 產出 compliance checklist，標明哪些已做、哪些還要我自己補`},
+];
+const PERMS=[
+ ['acceptEdits','acceptEdits — 自動接受檔案編輯，其餘仍會詢問'],
+ ['dontAsk','dontAsk — 不詢問，未授權的動作直接略過'],
+ ['bypassPermissions','bypassPermissions — 略過所有權限檢查（危險）'],
+ ['plan','plan — 只規劃不執行'],
+];
+
+let S={projects:[],running:[],runs:[]}, sel=null, tab='s3', logRun=null, es=null,
+    showTools=true, lines=[], err='', ticking=null, openedRun=null, gen=0, ENV=[];
+
+const projOf=id=>S.projects.find(p=>p.id===id);
+const runningFor=id=>S.running.find(r=>r.projectId===id);
+const fmtDur=ms=>{const s=Math.floor(ms/1000);return `${Math.floor(s/60)} 分 ${s%60} 秒`};
+
+async function refresh(){
+  try{ const j=await api('/api/state'); S=j;
+    if(!sel||!projOf(sel)) sel=S.projects[0]?.id||null;
+    $('#srvnote').textContent=`伺服器 ${location.host}　資料：${S.projects.length} 篇`;
+  }catch(e){ err=e.message }
+  paint();
+}
+
+/* ── rail ──────────────────────────────────────── */
+function paintRail(){
+  const h=$('#plist'); h.innerHTML='';
+  if(!S.projects.length) h.append(el('div','lede','還沒有論文，按下面新增。'));
+  S.projects.forEach(p=>{
+    const r=runningFor(p.id);
+    const b=el('button','pcard'+(p.id===sel?' sel':''));
+    b.append(el('div','t',p.name));
+    const s=el('div','s');
+    s.append(document.createTextNode((p.journal||'未指定期刊')+' · '));
+    s.append(r?Object.assign(el('span','live'),{textContent:'執行中：'+r.serviceName}):el('span',null,'閒置'));
+    b.append(s);
+    b.onclick=()=>{sel=p.id;logRun=null;paint()};
+    h.append(b);
+  });
+  const e=$('#envlist'); e.innerHTML='';
+  if(!ENV.length) e.append(el('div','envrow','檢查中…'));
+  ENV.forEach(x=>{const r=el('div','envrow');
+    const nm=el('span','nm',x.n); if(x.note)nm.title=x.note; r.append(nm);
+    r.append(el('span',x.ok?'y':'n',x.ok?'✓':'✕')); e.append(r)});
+}
+
+/* ── main ──────────────────────────────────────── */
+function paint(){
+  paintRail();
+  const m=$('#main'); m.innerHTML='';
+  if(err){const b=el('div','err-banner',err);m.append(b);err=''}
+  if(!S.projects.length){ m.append(newProjectCard(true)); return }
+  const p=projOf(sel); if(!p){ m.append(newProjectCard(true)); return }
+  const run=runningFor(p.id);
+
+  const head=el('div','phead');
+  head.append(Object.assign(el('h1'),{textContent:p.name}));
+  head.append(el('span','meta',(p.journal||'未指定期刊')+' · '+p.type));
+  m.append(head);
+  m.append(el('div','pdir',p.dir));
+
+  m.append(banner(p,run));
+  m.append(stages(p,run));
+
+  const tabs=el('div','tabs');tabs.setAttribute('role','tablist');
+  const T=[...SERVICES.map(s=>({k:'s'+s.n,l:`${'①②③④'[[3,4,1,2].indexOf(s.n)]} ${s.name}`})),
+           {k:'log',l:'執行紀錄'},{k:'set',l:'材料與設定'}];
+  T.forEach(t=>{const b=el('button','tab');b.setAttribute('role','tab');
+    b.setAttribute('aria-selected',t.k===tab);b.append(document.createTextNode(t.l));
+    if(t.k==='log'&&S.runs.filter(r=>r.projectId===p.id).length)
+      b.append(el('span','badge'+(run?' on':''),String(S.runs.filter(r=>r.projectId===p.id).length)));
+    b.onclick=()=>{tab=t.k;paint()};tabs.append(b)});
+  m.append(tabs);
+
+  if(tab==='log') m.append(logPanel(p));
+  else if(tab==='set') m.append(settingsCard(p),newProjectCard(false));
+  else {
+    const s=SERVICES.find(x=>'s'+x.n===tab)||SERVICES[0];
+    m.append(serviceCard(p,s,run));
+  }
+}
+
+function banner(p,run){
+  const b=el('div','banner'+(run?'':' idle'));
+  const bi=el('div','bi');
+  if(run){
+    bi.append(Object.assign(el('h3'),{id:'btitle',
+      textContent:`${run.serviceName} 執行中 · 已 ${fmtDur(Date.now()-run.startedAt)}`}));
+    bi.append(Object.assign(el('div','step'),{id:'bstep',textContent:'[STEP] 啟動中…'}));
+    bi.append(el('p',null,'可以關掉瀏覽器分頁，流程會在背景繼續；不要關掉啟動伺服器的終端機。'));
+  }else{
+    const last=S.runs.find(r=>r.projectId===p.id);
+    bi.append(el('h3',null,last?`上次：${last.serviceName} — ${({done:'完成',failed:'失敗',stopped:'已停止'})[last.status]||last.status}`:'尚未執行任何流程'));
+    bi.append(el('p',null,last?new Date(last.startedAt).toLocaleString('zh-TW')
+      +(last.cost!=null?` · 花費 US$${last.cost.toFixed(3)}`:''):'從上面任一服務分頁按「開始執行」。'));
+  }
+  b.append(bi);
+  const act=el('div','bactions');
+  if(run){
+    const v=el('button','btn','看執行紀錄');v.onclick=()=>{tab='log';logRun=run.id;paint()};
+    const st=el('button','btn danger','停止');
+    st.onclick=async()=>{st.disabled=true;try{await api('/api/stop',{method:'POST',
+      headers:{'content-type':'application/json'},body:JSON.stringify({runId:run.id})})}
+      catch(e){err=e.message}refresh()};
+    act.append(v,st);
+  }
+  b.append(act);
+  if(run){clearInterval(ticking);ticking=setInterval(()=>{const t=$('#btitle');
+    if(!t){clearInterval(ticking);return}
+    t.textContent=`${run.serviceName} 執行中 · 已 ${fmtDur(Date.now()-run.startedAt)}`},1000)}
+  else clearInterval(ticking);
+  return b;
+}
+
+function stages(p,run){
+  const h=el('div','stages');
+  [3,4,1,2].forEach(n=>{
+    const s=SERVICES.find(x=>x.n===n);
+    const last=S.runs.find(r=>r.projectId===p.id&&r.service===s.key);
+    const active=run&&run.service===s.key;
+    const c=el('div','stage'+(active?' run':last&&last.status==='done'?' done':''));
+    c.append(el('div','n','Service '+s.n));
+    c.append(el('div','nm',s.name));
+    c.append(el('div','d',s.desc));
+    const row=el('div','row');
+    const st=el('div','st');const pip=el('span','pip'+(active?' on':''));
+    pip.style.background=active?'':last?(last.status==='done'?'var(--ok)':'var(--bad)'):'var(--dim)';
+    st.append(pip,el('span',null,active?'執行中':last?({done:'已完成',failed:'失敗',stopped:'已停止'})[last.status]||last.status:'未執行'));
+    row.append(st);
+    const go=el('button','btn'+(active?'':' primary'),active?'執行中':'開始執行');
+    go.disabled=!!run;
+    go.onclick=()=>{tab='s'+s.n;paint();setTimeout(()=>$('#startbtn')?.click(),0)};
+    row.append(go);
+    c.append(row);
+    h.append(c);
+  });
+  return h;
+}
+
+function serviceCard(p,s,run){
+  const c=el('div','card');
+  c.append(el('h3',null,`Service ${s.n} · ${s.name}`));
+  c.append(el('p','lede',s.desc));
+  if(s.n===2&&!p.journal)
+    c.append(Object.assign(el('div','warnbox'),{textContent:'這個專案還沒有填目標期刊。先到「材料與設定」填好，或在下面的指令裡寫清楚，否則流程會停下來問。'}));
+  if((p.permissionMode||'acceptEdits')==='bypassPermissions')
+    c.append(Object.assign(el('div','warnbox'),{textContent:'權限模式是 bypassPermissions：這個流程會略過所有權限確認，包含刪除檔案與對外連線。只在你信任這個資料夾的內容時使用。'}));
+
+  const f=el('div','field');
+  f.append(el('label',null,'送給 Claude Code 的指令（可以改，這次執行就用你改過的版本）'));
+  const ta=el('textarea','prompt');ta.id='prompt';ta.value=s.prompt+
+    (p.journal?`\n\n目標期刊：${p.journal}`:'');
+  f.append(ta);
+  f.append(el('div','hint',`工作目錄：${p.dir}　模型：${p.model||'預設'}　權限：${p.permissionMode||'acceptEdits'}`));
+  c.append(f);
+
+  const row=el('div');row.style.cssText='display:flex;gap:9px;flex-wrap:wrap';
+  const go=el('button','btn primary','開始執行');go.id='startbtn';go.disabled=!!run;
+  if(run)go.textContent='已有流程在跑';
+  go.onclick=async()=>{
+    go.disabled=true;go.textContent='啟動中…';
+    try{
+      const j=await api('/api/run',{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({projectId:p.id,serviceKey:s.key,serviceName:s.name,prompt:ta.value})});
+      logRun=j.run.id;tab='log';await refresh();
+    }catch(e){err=e.message;go.disabled=false;go.textContent='開始執行';paint()}
+  };
+  row.append(go);
+  const reset=el('button','btn','還原預設指令');
+  reset.onclick=()=>{ta.value=s.prompt+(p.journal?`\n\n目標期刊：${p.journal}`:'')};
+  row.append(reset);
+  c.append(row);
+  return c;
+}
+
+/* ── log panel ─────────────────────────────────── */
+function logPanel(p){
+  const c=el('div','card');
+  const runs=S.runs.filter(r=>r.projectId===p.id);
+  const active=runningFor(p.id);
+  if(!logRun) logRun=active?active.id:(runs[0]?.id||null);
+
+  const bar=el('div','logbar');
+  bar.append(el('h3',null,'執行紀錄'));
+  const selr=el('select');
+  if(!runs.length){const o=el('option',null,'（還沒有紀錄）');selr.append(o);selr.disabled=true}
+  runs.forEach(r=>{const o=el('option',null,
+    `${r.id}.jsonl — ${r.serviceName} · ${({running:'執行中',done:'完成',failed:'失敗',stopped:'已停止',stopping:'停止中'})[r.status]||r.status}`);
+    o.value=r.id;if(r.id===logRun)o.selected=true;selr.append(o)});
+  selr.onchange=()=>{logRun=selr.value;openLog()};
+  bar.append(selr);
+  const chk=el('label','chk');const cb=el('input');cb.type='checkbox';cb.checked=showTools;
+  cb.onchange=()=>{showTools=cb.checked;renderLog()};
+  chk.append(cb,el('span',null,'顯示工具呼叫'));
+  const sp=el('span');sp.style.flex='1';
+  bar.append(sp,chk);
+  c.append(bar);
+
+  const box=el('div','log');box.id='logbox';
+  box.append(el('div','empty',runs.length?'載入中…':'還沒有執行紀錄。從任一服務分頁按「開始執行」。'));
+  c.append(box);
+  // paint() rebuilds this DOM on every poll. Only re-open the stream when the
+  // selected run actually changed; otherwise just repaint from what we have,
+  // so a reconnect never replays the log on top of itself.
+  setTimeout(()=>{ if(logRun && logRun!==openedRun) openLog(); else renderLog() },0);
+  return c;
+}
+
+function openLog(){
+  if(es){es.close();es=null}
+  const myGen=++gen;            // stale frames from the previous stream are dropped
+  lines=[]; openedRun=logRun;
+  const box=$('#logbox'); if(box) box.innerHTML='';
+  if(!logRun) return;
+  es=new EventSource('/api/stream?run='+encodeURIComponent(logRun));
+  let pending=[], raf=null;
+  es.onmessage=e=>{
+    if(myGen!==gen) return;
+    let m;try{m=JSON.parse(e.data)}catch{return}
+    if(m.t==='line'){
+      pending.push(m.line);
+      if(!raf)raf=requestAnimationFrame(()=>{
+        raf=null; if(myGen!==gen){pending=[];return}
+        lines.push(...pending);pending=[];renderLog();
+      });
+    } else if(m.t==='end'){ es.close(); es=null; refresh() }
+  };
+  es.onerror=()=>{ if(es){es.close();es=null} };
+}
+
+function evNode(o){
+  if(o.type==='system'&&o.subtype==='init'){
+    const bits=[o.model?'模型 '+o.model:null, o.permissionMode?'權限 '+o.permissionMode:null,
+                o.claude_code_version?'v'+o.claude_code_version:null].filter(Boolean);
+    return el('div','ev sys',`Claude 已啟動（${bits.join(' · ')}）`);
+  }
+  if(o.type==='runner_error'||o.type==='runner_stderr')
+    return el('div','ev err',(o.type==='runner_error'?'runner: ':'')+o.text);
+  if(o.type==='assistant'&&o.message?.content){
+    const frag=document.createDocumentFragment();
+    for(const b of o.message.content){
+      if(b.type==='text'&&b.text?.trim()){
+        for(const chunk of b.text.split(/\n(?=\[[A-Z][A-Z0-9 _一-鿿-]{1,24}\])/)){
+          const mm=chunk.match(/^\[([^\]]{1,24})\]\s*(.*)$/s);
+          if(mm){frag.append(el('div','ev band','['+mm[1]+'] '+(mm[2]||'').split('\n')[0]));
+            const rest=(mm[2]||'').split('\n').slice(1).join('\n').trim();
+            if(rest)frag.append(el('div','ev txt',rest));}
+          else if(chunk.trim())frag.append(el('div','ev txt',chunk.trim()));
+        }
+      }else if(b.type==='tool_use'&&showTools){
+        const d=el('div','ev tool');d.append(Object.assign(el('b'),{textContent:b.name}));
+        const inp=b.input||{};
+        const summary=inp.command||inp.file_path||inp.path||inp.pattern||inp.prompt||
+          (inp.url?inp.url:JSON.stringify(inp).slice(0,300));
+        d.append(document.createTextNode(' '+String(summary).replace(/\s+/g,' ').slice(0,400)));
+        frag.append(d);
+      }
+    }
+    return frag;
+  }
+  if(o.type==='user'&&o.message?.content&&showTools){
+    const frag=document.createDocumentFragment();
+    for(const b of o.message.content){
+      if(b.type!=='tool_result')continue;
+      const txt=typeof b.content==='string'?b.content
+        :Array.isArray(b.content)?b.content.map(x=>x.text||'').join('\n'):'';
+      if(!txt.trim())continue;
+      const d=el('div','ev res',txt.slice(0,4000));
+      d.onclick=()=>d.classList.toggle('open');
+      frag.append(d);
+    }
+    return frag;
+  }
+  if(o.type==='result'||o.total_cost_usd!=null){
+    const ok=!o.is_error&&o.subtype!=='error_during_execution';
+    const d=el('div','ev fin'+(ok?'':' bad'),ok?'流程結束':'流程以錯誤結束');
+    const bits=[];
+    if(o.num_turns!=null)bits.push(o.num_turns+' turns');
+    if(o.duration_ms!=null)bits.push(Math.round(o.duration_ms/1000)+'s');
+    if(o.total_cost_usd!=null)bits.push('US$'+Number(o.total_cost_usd).toFixed(3));
+    if(bits.length)d.append(el('span','tiny',bits.join(' · ')));
+    return d;
+  }
+  return null;
+}
+
+function renderLog(){
+  const box=$('#logbox'); if(!box)return;
+  const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;
+
+  // Pre-pass: text arrives first as stream_event deltas and only later as a
+  // committed `assistant` message. Show the deltas so a long run is not a
+  // blank panel, but drop them once the real message lands, and keep whatever
+  // a stopped run managed to emit.
+  const parsed=[], partial=new Map(), committed=new Set();
+  for(const l of lines){
+    let o;try{o=JSON.parse(l)}catch{continue}
+    parsed.push(o);
+    // only once the *text* has actually landed — an earlier assistant event for
+    // the same id may carry only thinking or a tool_use, and suppressing the
+    // deltas on that would leave the panel blank for the whole turn
+    if(o.type==='assistant'&&o.message?.id&&
+       o.message.content?.some(b=>b.type==='text'&&b.text?.trim())) committed.add(o.message.id);
+    const d=o.type==='stream_event'?o.event:null;
+    if(d&&d.type==='content_block_delta'&&d.delta?.type==='text_delta'&&o.api_message_id)
+      partial.set(o.api_message_id,(partial.get(o.api_message_id)||'')+d.delta.text);
+  }
+
+  box.innerHTML='';
+  let n=0, step='', shown=new Set(), sawResult=false;
+  for(const o of parsed){
+    if(o.type==='assistant'&&o.message?.content)
+      for(const b of o.message.content)
+        if(b.type==='text'){const mm=b.text.match(/\[STEP\][^\n]*/);if(mm)step=mm[0]}
+    if(o.type==='result'||o.total_cost_usd!=null) sawResult=true;
+
+    if(o.type==='stream_event'){
+      const id=o.api_message_id;
+      if(id&&!committed.has(id)&&partial.has(id)&&!shown.has(id)){
+        shown.add(id);
+        const t=partial.get(id).trim();
+        if(t){const d=el('div','ev txt',t);d.append(el('span','tiny','… 輸出中'));box.append(d);n++}
+      }
+      continue;
+    }
+    const node=evNode(o); if(node){box.append(node);n++}
+  }
+
+  const meta=S.runs.find(r=>r.id===logRun);
+  if(meta&&!sawResult&&meta.status&&meta.status!=='running'){
+    const d=el('div','ev fin'+(meta.status==='done'?'':' bad'),
+      ({stopped:'已由使用者停止',failed:'流程失敗',stopping:'停止中…'})[meta.status]||meta.status);
+    if(meta.exitCode!=null)d.append(el('span','tiny','exit '+meta.exitCode));
+    box.append(d);n++;
+  }
+  if(!n)box.append(el('div','empty','（這次執行還沒有可顯示的輸出）'));
+  const bs=$('#bstep'); if(bs&&step)bs.textContent=step;
+  if(atBottom)box.scrollTop=box.scrollHeight;
+}
+
+/* ── project forms ─────────────────────────────── */
+function newProjectCard(first){
+  const c=el('div','card');
+  c.append(el('h3',null,first?'新增第一篇論文':'新增論文'));
+  c.append(el('p','lede','指向放著本文、supplementary 與圖檔的資料夾。這個資料夾就是 Claude Code 的工作目錄。'));
+  const g=el('div','grid2');
+  const mk=(lbl,ph,hint)=>{const f=el('div','field');f.append(el('label',null,lbl));
+    const i=el('input');i.placeholder=ph;f.append(i);if(hint)f.append(el('div','hint',hint));g.append(f);return i};
+  const dir=mk('資料夾絕對路徑','/Users/you/papers/my-manuscript','例如 ~/Documents/論文/SCNA');
+  const name=mk('論文名稱','SCNA in noise-associated VA');
+  const jr=mk('目標期刊（可留空）','Heart Rhythm');
+  const ty=mk('文章型態','Original article');
+  c.append(g);
+  const row=el('div');row.style.cssText='display:flex;gap:9px;flex-wrap:wrap;margin-top:4px';
+  const add=el('button','btn primary','新增');
+  add.onclick=async()=>{
+    add.disabled=true;
+    try{ const j=await api('/api/projects',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({dir:dir.value.trim(),name:name.value.trim()||undefined,
+        journal:jr.value.trim(),type:ty.value.trim()||'Original article'})});
+      sel=j.project.id;tab='s3';await refresh();
+    }catch(e){err=e.message;add.disabled=false;paint()}
+  };
+  row.append(add);c.append(row);
+  return c;
+}
+
+function settingsCard(p){
+  const c=el('div','card');
+  c.append(el('h3',null,'材料與設定'));
+  c.append(el('p','lede','工作目錄：'+p.dir));
+  const g=el('div','grid2');
+  const f1=el('div','field');f1.append(el('label',null,'目標期刊'));
+  const jr=el('input');jr.value=p.journal||'';f1.append(jr);g.append(f1);
+  const f2=el('div','field');f2.append(el('label',null,'文章型態'));
+  const ty=el('input');ty.value=p.type||'';f2.append(ty);g.append(f2);
+  const f3=el('div','field');f3.append(el('label',null,'模型（留空用預設）'));
+  const md=el('input');md.value=p.model||'';md.placeholder='opus / sonnet / fable';f3.append(md);g.append(f3);
+  const f4=el('div','field');f4.append(el('label',null,'權限模式'));
+  const pm=el('select');PERMS.forEach(([v,l])=>{const o=el('option',null,l);o.value=v;
+    if(v===(p.permissionMode||'acceptEdits'))o.selected=true;pm.append(o)});
+  f4.append(pm);f4.append(el('div','hint','headless 執行不會跳出權限視窗。acceptEdits 遇到未授權的指令會停住；bypassPermissions 全部放行，請只在信任的資料夾使用。'));
+  g.append(f4);
+  c.append(g);
+  const row=el('div');row.style.cssText='display:flex;gap:9px;flex-wrap:wrap;margin-top:4px';
+  const save=el('button','btn primary','儲存');
+  save.onclick=async()=>{save.disabled=true;
+    try{await api('/api/projects',{method:'PATCH',headers:{'content-type':'application/json'},
+      body:JSON.stringify({id:p.id,journal:jr.value.trim(),type:ty.value.trim(),
+        model:md.value.trim(),permissionMode:pm.value})});await refresh()}
+    catch(e){err=e.message;save.disabled=false;paint()}};
+  const del=el('button','btn danger','移除這篇（不會刪你的檔案）');
+  del.onclick=async()=>{ if(!confirm('從工作台移除「'+p.name+'」？資料夾裡的檔案不會被刪除。'))return;
+    try{await api('/api/projects',{method:'DELETE',headers:{'content-type':'application/json'},
+      body:JSON.stringify({id:p.id})});sel=null;await refresh()}catch(e){err=e.message;paint()}};
+  row.append(save,del);c.append(row);
+  return c;
+}
+
+refresh();
+api('/api/env').then(j=>{ENV=j.env||[];paintRail()}).catch(()=>{});
+setInterval(()=>{ if(!document.hidden) refresh() },5000);
+</script>
+</body>
+</html>
