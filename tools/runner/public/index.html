@@ -182,7 +182,7 @@ textarea.prompt{font-family:var(--mono);font-size:12px;line-height:1.65;min-heig
   <aside class="rail">
     <div>
       <div class="brand"><span class="dot"></span>醫學論文評析工作台</div>
-      <div class="flow"><b>稿件</b> → <b>嚴格評析</b> → <b>三位 reviewer</b> → <b>語言編修</b> → <b>期刊格式</b> → <b>投稿</b></div>
+      <div class="flow"><b>A</b> 剖析 → <b>B</b> 文獻 → <b>C</b> 圖檔 → <b>D</b> 評析 → <b>E</b> 審稿<br>→ <b>F</b> 修改 ⇄ <b>G</b> 把關（最多 3 輪）→ 投稿</div>
     </div>
     <div style="display:grid;gap:9px">
       <div class="railsec">論文</div>
@@ -206,62 +206,120 @@ const api=async(p,o)=>{const r=await fetch(p,o);const j=await r.json().catch(()=
   if(!r.ok)throw new Error(j.error||('HTTP '+r.status));return j};
 
 const SERVICES=[
- {n:3,key:'appraisal',name:'嚴格評析',
-  desc:'以基礎與臨床醫學角度剖析邏輯，產出 10–20 個 Major / Minor concerns。',
-  prompt:`[STAGE 嚴格評析]
-請用 medical-manuscript-review skill 的 Service 3，對這個資料夾裡的稿件做嚴格評析。
-
-每進入一個步驟，先單獨印一行 [STEP] 加上步驟名稱，方便我在執行紀錄裡追蹤。
-
-1. 擷取所有檔案（本文、supplementary、圖檔 pptx），印出 manuscript profile
-2. 實際看過每一張圖的渲染圖，不要只讀文字
-3. 跨圖列出每組 n、重算所有可重算的統計、檢查時間窗口是否符合該物種生理、
-   檢查硬體設定與分析設定是否相容
-4. 產出 Major / Minor concerns，每條要有位置、為何重要、具體要做什麼
-5. 寫成 02_critical_appraisal.md
-
-評析用繁體中文，引用稿件原文與專有名詞保持英文。`},
- {n:4,key:'panel',name:'三位 reviewer',
-  desc:'三位不同專長的審稿人各自獨立評讀，再加主編綜合判斷。',
-  prompt:`[STAGE 三位 reviewer]
-請用 medical-manuscript-review skill 的 Service 4，對這個資料夾裡的稿件做三位 reviewer 評讀。
+ {n:'A',key:'profile',name:'稿件剖析',gate:true,
+  desc:'擷取 docx/pptx、渲染圖檔、建 manuscript profile，把每個主張對應到證據。',
+  prompt:`[STAGE A 稿件剖析]
+請用 medical-manuscript-review skill，先讀 references/pipeline.md，然後執行 Stage A。
 
 每進入一個步驟，先單獨印一行 [STEP] 加上步驟名稱。
 
-1. 三位 reviewer 用各自獨立的 subagent，不要讓他們看到彼此的意見，
-   也不要看到 Service 3 的評析
+1. 用 scripts/extract_manuscript.py 擷取這個資料夾裡的本文、supplementary 與圖檔 pptx
+2. 讀 work/INVENTORY.md，把它自動標出的問題列給我
+3. **實際開啟 work/*_slides/*.png 看每一張圖**，不要只讀圖上的文字
+4. 讀檔內的共同作者註解
+5. 產出 01_manuscript_profile.md，並把你推定的研究類型與設計列出來讓我確認
+
+這一階段結束後停下來等我確認，不要直接往下做。`},
+ {n:'B',key:'literature',name:'文獻（PubMed）',gate:true,
+  desc:'PubMed 逐筆查證每一筆引用，找出漏引的關鍵文獻，標記撤稿。',
+  prompt:`[STAGE B 文獻]
+請執行 pipeline.md 的 Stage B。
+
+每進入一個步驟，先單獨印一行 [STEP]。
+
+1. 跑 scripts/extract_references.py work/main.md work/supp.md --out work/references.json
+2. 用 PubMed 的 MCP 工具逐筆查證（lookup_article_by_citation 批次查，再用
+   get_article_metadata 核對書目；書目殘缺的用 search_articles）
+3. 每筆判定 verified / corrected / duplicate / retracted / unverified / not_indexed
+4. 重複收錄用 PMID 比對，不要用書目字串
+5. 用 find_related_articles 找作者可能漏引的關鍵文獻
+6. 產出 citation_map.json 與 02_literature.md
+
+查不到的標 [VERIFY]，**絕對不要自行補上卷期頁碼或 DOI**。
+若查到任何撤稿或 expression of concern，立刻在對話裡告訴我，不要只寫進報告。
+
+這一階段結束後停下來等我確認。`},
+ {n:'C',key:'figures',name:'圖檔稽核',
+  desc:'實際看每一張圖，對照期刊的圖檔規範檢查軸、n、誤差線、統計標記。',
+  prompt:`[STAGE C 圖檔稽核]
+請執行 pipeline.md 的 Stage C。
+
+每進入一個步驟，先單獨印一行 [STEP]。
+
+逐張開啟 work/*_slides/*.png，依 references/journal-formatting.md 的圖檔規則檢查：
+panel 標示、字級、解析度、誤差線定義、每組 n、統計標記是否都在 legend 定義、
+色盲友善、scale bar、影像完整性、BioRender 之類的授權標註。
+
+不要替我重畫圖。報告問題即可，只修圖說與 panel 標籤這類安全的文字層項目。
+產出 03_figure_audit.md。`},
+ {n:'D',key:'appraisal',name:'嚴格評析',
+  desc:'一致性交叉檢查 + 10–20 個 Major / Minor concerns，每條標明位置與具體要做什麼。',
+  prompt:`[STAGE D 評析]
+請執行 pipeline.md 的 Stage D。
+
+每進入一個步驟，先單獨印一行 [STEP]。
+
+務必先做 SKILL.md 的一致性交叉檢查：
+- 跨圖列出每組 n，不可能同時成立的樣本數要抓出來
+- 重算所有能重算的統計（百分比、2×2 的 Fisher、兩個平均的倍率）
+- 檢查 SD / SEM 與圖上分布範圍是否相容
+- 把時間窗口、劑量放回該物種的生理尺度檢查
+- 檢查硬體設定與分析設定是否相容
+
+然後產出 10–20 個 concerns，每條要有位置、為何重要、具體要做什麼，
+並標記是需要新實驗、重新分析，還是純文字修改。
+
+產出 04_appraisal.md。評析用繁體中文，引用稿件原文保持英文。`},
+ {n:'E',key:'panel',name:'三位 reviewer',
+  desc:'三位不同專長的審稿人各自獨立評讀，加主編綜合，並產出結構化評分。',
+  prompt:`[STAGE E 三位 reviewer]
+請執行 pipeline.md 的 Stage E。
+
+每進入一個步驟，先單獨印一行 [STEP]。
+
+1. 三位 reviewer 用各自獨立的 subagent，不要讓他們看到彼此的意見，也不要看到 Stage D 的評析
 2. 每位都要讀圖檔的渲染圖
-3. 每位要有 recommendation、scores、給編輯的保密意見
-4. 最後加主編綜合判斷：共識項目表、意見分歧之處、決定成敗的關鍵、修改路線圖
-5. 寫成 03_reviewer_panel.md
+3. 每位要有 recommendation、五軸評分（1–5）、給編輯的保密意見
+4. 主編綜合：共識項目表、意見分歧、決定成敗的關鍵、修改路線圖
+5. 產出 05_panel.md（給人看）**以及 review_v0.json**（給把關迴圈用，schema 見 pipeline.md）
 
 審稿意見用英文，中文重點摘要放在每份後面。`},
- {n:1,key:'language',name:'語言編修',
-  desc:'專業醫學英文與文法修訂，不改動任何數字或結論強度。',
-  prompt:`[STAGE 語言編修]
-請用 medical-manuscript-review skill 的 Service 1，對這個資料夾裡的稿件做語言編修。
+ {n:'F',key:'revise',name:'修改稿件',
+  desc:'把 concerns 轉成追蹤修訂寫回 docx，語意不清處用 Word 註解提問。',
+  prompt:`[STAGE F 修改]
+請執行 pipeline.md 的 Stage F。
 
-每進入一個步驟，先單獨印一行 [STEP] 加上步驟名稱。
+每進入一個步驟，先單獨印一行 [STEP]。
 
-1. 產出 tracked changes 的 .docx，加上 change log（原文 → 修改後 → 理由）
-2. 不要改動任何數字、P 值、樣本數，也不要改變結論強度
-3. 語意不清的地方用 author query 標出來問我，不要自己猜
-4. 圖說、表標題與 supplementary 的文字也要一起編修
+1. 把 04_appraisal.md 與 05_panel.md 裡**不需要新資料就能做完**的項目轉成 edits.json
+2. 跑 scripts/revise_docx.py 產出 manuscript_r1.docx 與 change_log_r1.md
+3. 需要新實驗或重新分析的 concern **不要在稿件上動手**，寫進回覆草稿
 
-工作在複本上，不要覆蓋我原本的檔案。`},
- {n:2,key:'format',name:'期刊格式',
-  desc:'依目標期刊現行 author guidelines 調整結構、字數與 reference 格式。',
-  prompt:`[STAGE 期刊格式]
-請用 medical-manuscript-review skill 的 Service 2，把這個資料夾裡的稿件改成目標期刊的格式。
+硬性規則：
+- 不得改動任何數字、P 值、樣本數、劑量
+- 不得改變結論的方向或強度（要改的話那是一條 concern，不是語言編修）
+- 語意不清的地方用 query 加 Word 註解問我，不要自己猜
+- 腳本回報「未套用」的修訂要列給我看
 
-每進入一個步驟，先單獨印一行 [STEP] 加上步驟名稱。
+最後告訴我這一輪改了幾處、哪些還等我決定。`},
+ {n:'G',key:'gate',name:'把關迴圈',
+  desc:'獨立 subagent 重審改後稿件，比分決定接受或回退。最多 3 輪。',
+  prompt:`[STAGE G 把關]
+請執行 pipeline.md 的 Stage G。
 
-1. 即時抓取該期刊現行的 author guidelines，抓不到就停下來告訴我
-2. 整理成需求表（字數、abstract 結構、reference 格式、圖表上限、必要聲明）
-3. 套用到稿件的複本
-4. Reference 逐筆用 PubMed/Crossref 查證，查不到的標 [VERIFY]，
-   不要自行補上卷期頁碼或 DOI
-5. 產出 compliance checklist，標明哪些已做、哪些還要我自己補`},
+每進入一個步驟，先單獨印一行 [STEP]。
+
+1. 用**全新的 reviewer subagent**重審 manuscript_r1.docx。
+   它不可以看到 Stage F 的修改理由，也不可以看到前一輪的審稿意見——
+   只給它改後的稿件。產出 review_v1.json
+2. 跑 scripts/refine_gate.py review_v0.json review_v1.json --round 1 \
+      --worklog refinement/worklog.json
+3. exit 0（ACCEPT）→ 保留這一輪，告訴我要不要進下一輪
+   exit 1（REVERT）→ **真的回退**：把 manuscript_r1.docx 擱置，
+   回到上一版，並說明哪一輪被回退、為什麼
+
+把分數下降的那一版當成成果交出去，比不修改更糟。
+重審必須是獨立 subagent——自己改的稿件自己重審，分數幾乎一定上升，閘門就沒意義了。`},
 ];
 const PERMS=[
  ['acceptEdits','acceptEdits — 自動接受檔案編輯，其餘仍會詢問'],
@@ -367,7 +425,7 @@ function paint(){
   m.append(stages(p,run));
 
   const tabs=el('div','tabs');tabs.setAttribute('role','tablist');
-  const T=[...SERVICES.map(s=>({k:'s'+s.n,l:`${'①②③④'[[3,4,1,2].indexOf(s.n)]} ${s.name}`})),
+  const T=[...SERVICES.map(s=>({k:'s'+s.n,l:`${s.n} ${s.name}`})),
            {k:'out',l:'成果'},{k:'log',l:'執行紀錄'},{k:'set',l:'材料與設定'},{k:'help',l:'使用說明'}];
   T.forEach(t=>{const b=el('button','tab');b.setAttribute('role','tab');
     b.setAttribute('aria-selected',t.k===tab);b.append(document.createTextNode(t.l));
@@ -422,12 +480,11 @@ function banner(p,run){
 
 function stages(p,run){
   const h=el('div','stages');
-  [3,4,1,2].forEach(n=>{
-    const s=SERVICES.find(x=>x.n===n);
+  SERVICES.forEach(s=>{
     const last=S.runs.find(r=>r.projectId===p.id&&r.service===s.key);
     const active=run&&run.service===s.key;
     const c=el('div','stage'+(active?' run':last&&last.status==='done'?' done':''));
-    c.append(el('div','n','Service '+s.n));
+    c.append(el('div','n','Stage '+s.n+(s.gate?' · 需你確認':'')));
     c.append(el('div','nm',s.name));
     c.append(el('div','d',s.desc));
     const row=el('div','row');
@@ -447,9 +504,9 @@ function stages(p,run){
 
 function serviceCard(p,s,run){
   const c=el('div','card');
-  c.append(el('h3',null,`Service ${s.n} · ${s.name}`));
+  c.append(el('h3',null,`Stage ${s.n} · ${s.name}`));
   c.append(el('p','lede',s.desc));
-  if(s.n===2&&!p.journal)
+  if(s.key==='format'&&!p.journal)
     c.append(Object.assign(el('div','warnbox'),{textContent:'這個專案還沒有填目標期刊。先到「材料與設定」填好，或在下面的指令裡寫清楚，否則流程會停下來問。'}));
   if((p.permissionMode||'acceptEdits')==='bypassPermissions')
     c.append(Object.assign(el('div','warnbox'),{textContent:'權限模式是 bypassPermissions：這個流程會略過所有權限確認，包含刪除檔案與對外連線。只在你信任這個資料夾的內容時使用。'}));

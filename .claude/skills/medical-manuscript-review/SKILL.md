@@ -22,6 +22,19 @@ what a sceptical reviewer will see, and English is often not their first languag
 is precise medical English, exact compliance with a journal's rules, and the honest, specific
 criticism that co-authors are usually too polite to give.
 
+## Two ways to work
+
+**The staged pipeline (A-G)** — read `references/pipeline.md`. Adapted from
+google-research/paper-orchestra: profile → PubMed literature → figure audit →
+appraisal → reviewer panel → revise the .docx with tracked changes → an
+independent re-review that scores the round and reverts it if it did not
+improve. Use this when the user wants the manuscript actually revised, not
+just critiqued, and when they are driving it from the local runner in
+`tools/runner/`.
+
+**A single service on its own** — the table below. Use this when the user asks
+for one thing ("just the reviewer comments", "reformat for this journal").
+
 ## The four services
 
 | # | Service | Reference to read first | Main deliverable |
@@ -167,6 +180,18 @@ Default file names:
 - `06_response_to_reviewers.docx` / `.md` - the point-by-point reply, built with
   `scripts/make_response_template.py`. Offer it after service 4, and whenever the user
   brings back a real decision letter; `references/reviewer-panel.md` says how to fill it.
+
+Pipeline runs use the stage names and outputs in `references/pipeline.md` instead.
+
+## Scripts
+
+| Script | What it does |
+|--------|--------------|
+| `extract_manuscript.py` | .docx/.pptx → markdown with `[P..]` ids, slide renders, and an audit of placeholders, stray paragraphs and uncited references |
+| `extract_references.py` | the reference list → a structured worklist for PubMed verification |
+| `revise_docx.py` | an edits JSON → a .docx with real tracked changes and Word comments |
+| `refine_gate.py` | two review JSONs → ACCEPT or REVERT for a revision round |
+| `make_response_template.py` | reviewer comments → a point-by-point response .docx |
 
 For .docx output with tracked changes, use the `docx` skill if one is available in the
 session - it handles tracked-change markup properly. If not, produce the clean edited .docx
