@@ -65,6 +65,13 @@ embedded images) with your image-reading ability. Most figure problems - unlabel
 missing error-bar definitions, n not shown, inconsistent colours between panels, numbers that
 disagree with the text - are invisible in the extracted text.
 
+**Read the comments left in the file.** `INVENTORY.md` flags them and the text dump lists
+them at the end. Co-authors' and supervisors' unresolved comments tell you what the team
+already knows is unfinished, which figure was inserted without renumbering the rest, and
+which paragraph a senior author has already asked to be rewritten. Raising those as if you
+found them independently wastes everyone's time; confirming them adds weight. Comments are
+often in the authors' own language - read them in whatever language they are in.
+
 PDF inputs: read them directly. Other formats (.xlsx supplementary tables, .csv): open with
 the usual tools.
 
@@ -82,16 +89,41 @@ so that a wrong inference is caught early:
 ## Step 2: Cross-check consistency
 
 Do this once, whichever service was requested; every service depends on it, and these are the
-errors authors most fear a reviewer finding. Check and record any mismatch:
+errors authors most fear a reviewer finding. `INVENTORY.md` already reports placeholders left
+in the text, stray empty paragraphs and references that are never cited - start from those,
+then do the checks a script cannot:
 
-- Numbers: abstract vs. results vs. tables vs. figures vs. supplementary (n, percentages,
-  effect sizes, CIs, P values). Recompute percentages and totals from the stated counts.
-- Participant flow: do the numbers at each stage add up; do denominators change silently?
+- **Tabulate the n per group from every figure, table and panel, side by side.** Group sizes
+  that cannot all be true of the same animals or patients are among the most damaging things
+  a reviewer finds, and the mismatch is invisible unless you lay the numbers out together.
+  Measurements described as simultaneous must share an n; a downstream analysis cannot have
+  a larger n than the upstream one it derives from.
+- **Recompute every statistic you can** from the counts and summary values printed in the
+  text and figures: percentages, totals, a Fisher exact or chi-square from a 2×2, a
+  fold-change from two means. Two things come out of this - you confirm which test produced
+  a reported P value, and you find the comparisons the authors describe in words but never
+  actually tested. Also check that a stated SD or SEM is compatible with the plotted range
+  (for N observations, SEM × √N must be a credible SD for data spanning that range).
+- **Check numbers against physiology before accepting them.** A time window, threshold, dose
+  or cut-off that is reasonable in one species may be nonsense in another - a 0.2 s coupling
+  window spans more than one cardiac cycle in a mouse. Work out what the number means in the
+  organism studied.
+- **Check instrument settings against the analysis.** Sampling rate and amplifier bandwidth
+  must support the frequency band analysed; filter settings must match what is claimed to be
+  isolated. A paper cannot analyse content its hardware never acquired.
+- Participant/animal flow: do the numbers at each stage add up; do denominators change
+  silently? Is there a flow diagram at all?
 - Every figure, table and supplementary item is cited in the text, in order, and exists.
-- Every in-text citation has a reference-list entry and vice versa; numbering is sequential.
+  Supplementary items are the usual casualty - check each one's number against the panel
+  references inside its own legend, which drift out of step when a figure is inserted.
+- Every in-text citation has a reference-list entry and vice versa; numbering is sequential;
+  no reference appears twice under different numbers.
 - Abbreviations defined at first use in abstract and again in main text; used consistently.
 - Methods ↔ Results: every analysis described is reported; every result has a method.
-- Conclusions ↔ Results: does the abstract's conclusion claim more than the data show?
+  Watch for analyses run several ways (two instruments, three settings) where only the
+  variant that produced a result is presented as the pre-planned one.
+- Conclusions ↔ Results: does the abstract's conclusion claim more than the data show? Is
+  every claim in the abstract and conclusions traceable to a reported, tested comparison?
 
 ## Step 3: Run the requested service(s)
 

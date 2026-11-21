@@ -101,6 +101,28 @@ a bench paper still claims clinical relevance in its last paragraph.
   an experiment, or bridged by assertion? Correlation between a marker and a phenotype is
   not mechanism. Is there both necessity (loss-of-function) and sufficiency
   (gain-of-function / rescue)?
+- **Is the measurement actually measuring what it is named after?** This is the question
+  that decides papers built on a new or transferred technique, and it is easy to skip
+  because the paper's own name for the signal is used throughout. Ask what else could
+  generate it - a neighbouring organ, movement, a sharp electrical transient whose
+  high-frequency edge passes the filter - and ask what control would exclude that. The
+  decisive control is usually cheap and negative: abolish the true source (pharmacological
+  blockade, post-mortem recording, a null preparation) and show the signal goes with it.
+  If the authors' own intervention should have abolished the signal and did not, that is
+  the finding, whatever the paper concludes.
+- **Does the manipulation that carries the causal claim have independent verification?**
+  A knockout, a lesion, a denervation or a depletion must be documented, not assumed -
+  histology, protein or transmitter content, or a functional assay. Check the protocol is
+  reported in enough detail to repeat: dose per body weight, route, schedule, vehicle, and
+  the timing relative to the experiment.
+- **Acquisition settings vs. analysis settings**: sampling rate, bandwidth, filter order
+  and detection thresholds must be reported and must be mutually compatible. Content above
+  the acquisition bandwidth does not exist, however it is filtered afterwards.
+- **Anaesthesia and sedation**: which agent, what dose per body weight, how depth was
+  judged, how long before recording. Many agents profoundly suppress exactly what such
+  studies measure. Watch for an agent invoked to explain away a null result while the
+  positive results from the same recordings are treated as physiological - that asymmetry
+  is indefensible and reviewers pounce on it.
 - **Models**: is the cell line / animal model appropriate and authenticated (STR profiling,
   mycoplasma)? One cell line is an anecdote. Sex, age, strain, housing of animals. Does the
   model reflect the human disease stage being discussed? Dose and exposure relevant to
@@ -131,8 +153,28 @@ a bench paper still claims clinical relevance in its last paragraph.
 
 ### Statistics (both lenses)
 
+- **Does the analysis match the design the authors declared?** A paper that states a
+  factorial design (2 × 2, dose × time) and then reports only pairwise comparisons has not
+  tested its own hypothesis: "A is significant and B is not" is not evidence of an
+  interaction, and "treatment blocks the effect of exposure" *is* an interaction claim.
+  Look for the interaction term; its absence is a major concern, not a quibble.
+- **Was the headline comparison actually tested?** Trace every claim in the abstract,
+  discussion and conclusions back to a specific reported test. Authors routinely assert
+  that one group was protected, or that an effect was abolished, on the strength of one
+  comparison being significant and a neighbouring one not being shown at all. Recompute the
+  missing comparison where the counts allow; a claim that collapses at p = 0.08 is the most
+  valuable thing you can hand the author before a reviewer finds it.
+- **Were several analysis variants run?** Two instruments, three filter settings, four
+  time points, several scales - if the supplement contains near-duplicate analyses and only
+  one appears in the main text, the selection was almost certainly post hoc. Say so, and
+  ask for it to be declared in the Methods rather than implied to be pre-planned.
 - Test matches data type, distribution, pairing and design (repeated measures analysed as
   independent; t-tests across more than two groups; parametric tests on n = 3).
+- Summary statistic matches the test: non-parametric analyses summarised with median (IQR),
+  not mean ± SEM. Check that a quoted SD or SEM is arithmetically possible given the range
+  of the plotted data.
+- Significance threshold stated as < or ≤ - with ≤ 0.05, a result at exactly p = 0.050
+  becomes "significant", which is worth catching.
 - Multiplicity: number of outcomes, subgroups, time points, comparisons - any correction?
   Any sign of selective reporting or P-hacking (many P values just under 0.05)?
 - Effect size with confidence interval reported, not P alone. Non-significant result

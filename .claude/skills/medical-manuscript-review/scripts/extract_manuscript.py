@@ -37,8 +37,35 @@ def words(text):
     return len(re.findall(r"[A-Za-z0-9][A-Za-z0-9'’\-./%]*", text))
 
 
+def accepted_text(p_el):
+    """Paragraph text as if all tracked changes were accepted.
+
+    python-docx's Paragraph.text skips runs inside <w:ins>, so it silently drops
+    inserted text. Walk the XML instead: keep <w:t> (insertions included), skip
+    anything inside <w:del> / <w:moveFrom> (deleted text uses <w:delText> anyway).
+    """
+    out = []
+
+    def walk(el):
+        tag = el.tag.split("}")[-1]
+        if tag in ("del", "moveFrom"):
+            return
+        if tag == "t":
+            out.append(el.text or "")
+        elif tag == "tab":
+            out.append("\t")
+        elif tag in ("br", "cr"):
+            out.append("\n")
+        for c in el:
+            walk(c)
+
+    walk(p_el)
+    return "".join(out)
+
+
 def cell_text(cell):
-    return " ".join(p.text.strip() for p in cell.paragraphs if p.text.strip()).replace("|", "\\|")
+    texts = (accepted_text(p._p).strip() for p in cell.paragraphs)
+    return " ".join(t for t in texts if t).replace("|", "\\|")
 
 
 def table_md(table):
@@ -94,7 +121,7 @@ def extract_docx(path, out):
         tag = child.tag.split("}")[-1]
         if tag == "p":
             p = Paragraph(child, doc)
-            text = p.text.strip()
+            text = accepted_text(child).strip()
             if not text:
                 continue
             style = (p.style.name if p.style is not None else "") or ""
@@ -152,11 +179,12 @@ def extract_docx(path, out):
     if ins or dele:
         info.append(
             f"- WARNING: unaccepted tracked changes present ({ins} insertions, {dele} deletions). "
-            "Extracted text includes insertions and omits deletions; confirm with the author "
-            "which version is intended."
+            "The extracted text shows all changes ACCEPTED; confirm with the author that this "
+            "is the version they mean."
         )
     if comments:
-        info.append(f"- {len(comments)} comment(s) in file - see end of the .md dump")
+        info.append(f"- {len(comments)} comment(s) in file - READ THESE, see end of the .md dump")
+    info += audit_text("\n".join(lines))
     if fields:
         info.append(
             f"- Reference-manager field codes detected ({fields} citations): restyle via the "
@@ -164,6 +192,68 @@ def extract_docx(path, out):
             "on refresh."
         )
     return info
+
+
+PLACEHOLDER_RE = re.compile(
+    r"(X{3,}|\bTBD\b|\bTODO\b|\bFIXME\b|\bN/?A\?|\[insert[^\]]*\]|\bxxx\b|\?\?\?+"
+    r"|\b(?:lorem ipsum)\b)", re.I)
+
+
+def audit_text(md):
+    """Deterministic checks that are cheap to run and expensive to miss.
+
+    Every finding here cost a reviewer real credibility in at least one real
+    manuscript: an unfilled "XXXX" in the methods, a reference that is listed but
+    never cited, a paragraph left holding a single full stop. They are mechanical,
+    so let the script find them rather than spending reading attention on them.
+    """
+    out = []
+    body = re.sub(r"^\[P\d+\]\s*", "", md, flags=re.M)
+
+    hits = []
+    for m in PLACEHOLDER_RE.finditer(body):
+        line = body[: m.start()].count("\n")
+        ctx = body.splitlines()[line][:110] if line < len(body.splitlines()) else ""
+        hits.append(f'"{m.group(0)}" in: {ctx.strip()}')
+    if hits:
+        out.append(f"- PLACEHOLDERS LEFT IN TEXT ({len(hits)}):")
+        out += [f"    * {h}" for h in dict.fromkeys(hits)]
+
+    stray = [f"[P{m.group(1)}]" for m in re.finditer(r"\[P(\d+)\]\s*[.,;:]?\s*$", md, re.M)]
+    if stray:
+        out.append(f"- Empty / stray paragraphs: {', '.join(stray[:10])}")
+
+    # Reference list: "1.<tab>Author..." lines. Compare with numbers cited in the body.
+    listed = [int(n) for n in re.findall(r"^\[P\d+\]\s*(\d{1,3})\.\t", md, re.M)]
+    if len(listed) >= 5:
+        pre_ref = md[: md.rfind("## References")] if "## References" in md else md
+        txt = re.sub(r"^\[P\d+\]\s*", "", pre_ref, flags=re.M)
+        for pat in (r"p\s*[=<>≤≥]\s*0?\.\d+", r"\bN\s*=\s*\d+", r"\d+\.\d+\s*±\s*\d+\.\d+",
+                    r"\b0\.\d+\b", r"\b(?:19|20)\d\d\b", r"6-OHDA", r"C57BL/6",
+                    r"\d+\s*[-–]\s*\d+[,\d]*\s*(?:Hz|dB|kHz|°C|ms|s|min|mg|µL|mL)",
+                    r"\b\d+\s*(?:Hz|dB|kHz|°C|ms|min|mg|kg|µL|mL|µV|mV|bpm|days?|weeks?)\b",
+                    r"Figures?\s+S?\d+[A-Za-z]?(?:\s*[-–]\s*S?\d*[A-Za-z]?)?",
+                    r"Tables?\s+S?\d+"):
+            txt = re.sub(pat, " ", txt, flags=re.I)
+        cited = set()
+        for m in re.finditer(r"(?<=[A-Za-z\)\.,;])\s?(\d{1,3}(?:\s*[,\-–]\s*\d{1,3})*)(?=[\s.,;)]|$)", txt):
+            for part in re.split(r",", m.group(1)):
+                part = part.strip()
+                rng = re.match(r"^(\d+)\s*[-–]\s*(\d+)$", part)
+                if rng:
+                    cited.update(range(int(rng.group(1)), int(rng.group(2)) + 1))
+                elif part.isdigit():
+                    cited.add(int(part))
+        hi = max(listed)
+        never = sorted(set(listed) - {c for c in cited if 1 <= c <= hi})
+        out.append(f"- Reference list: {len(listed)} entries (1-{hi}).")
+        if never:
+            out.append(f"    * NEVER CITED in the text (verify by hand): {never}")
+
+    sup = sorted({int(n) for n in re.findall(r"Figure\s+S(\d+)", md)})
+    if sup:
+        out.append(f"- Supplementary figures referred to anywhere in this file: S{sup}")
+    return out
 
 
 def shape_lines(shape, depth=0):
