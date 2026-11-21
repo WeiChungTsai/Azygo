@@ -1,4 +1,4 @@
-# 審閱與修改管線（A–G）
+# 審閱與修改管線（A–H）
 
 改寫自 [google-research/paper-orchestra](https://github.com/google-research/paper-orchestra)
 （Song et al., 2026, Apache-2.0）。原版是「從實驗紀錄寫出一篇新論文」；這裡是
@@ -17,8 +17,9 @@
 | **E 三位 reviewer** | 三個獨立 subagent + 主編綜合 + 結構化評分 | `review_v0.json`、`05_panel.md` | — |
 | **F 修改** | 依 concerns 改 docx（追蹤修訂）+ 回覆草稿 | `manuscript_rN.docx`、`change_log.md` | — |
 | **G 把關** | 重審 → 比分 → 接受或回退 | `review_vN.json`、`worklog.json` | 自動 |
+| **H 回覆信** | 把所有輪次的意見去重，產出 point-by-point 回覆範本 | `06_response_to_reviewers.docx`／`.md` | — |
 
-A→B→C→D→E 是一次性的；**F→E'→G 是迴圈**，最多 3 輪。
+A→B→C→D→E 是一次性的；**F→E'→G 是迴圈**，最多 3 輪；H 在迴圈結束後跑一次。
 
 ---
 
@@ -227,6 +228,37 @@ python3 scripts/refine_gate.py review_v0.json review_v1.json \
 
 要提高解析度，每輪跑多組 reviewer 取平均（成本等比增加）。在那之前，把閘門當成**防止退步
 的煞車**，不是進步的量尺。
+
+---
+
+## Stage H — 回覆信
+
+迴圈結束後，把所有輪次的審稿意見整理成一份 point-by-point 回覆範本：
+
+```bash
+python3 scripts/make_response_template.py response_data.json \
+    --out . --basename 06_response_to_reviewers
+```
+
+JSON 的 schema 寫在腳本的 docstring 裡。三件事決定這份範本有沒有用：
+
+**一、去重，並標出重複次數。** 跑過 N 輪就有 3N 份意見，其中大部分在說同一件事。
+`issue_map` 每一列是一個議題，列出哪幾條提出、以及在幾輪裡被獨立提出過。被三輪都點到的
+議題就是編輯真正會看的那幾條——回覆寫不清楚就是退稿理由。
+
+**二、同一議題只寫一次完整回覆。** 其餘位置交叉引用
+（"Please see our response to Reviewer 1, Major comment 2."）。分開寫會自相矛盾，而
+編輯一定會比對。`answer_in` 指定寫在哪裡。
+
+**三、分成「能寫的」與「只有作者能決定的」。** `draft` 放已經可以用的英文草稿；
+`todo` 放作者必須自己查原始資料或做決定的事；`fallback` 放「如果那個實驗做不了，
+守得住的說法是什麼」。最後一項最常被略過，而它正是作者最需要的——
+退一步的說法要事先想好，不是在 deadline 前一天想。
+
+`checklist` 依工作量分組（零成本／回查紀錄簿／重新分析／新實驗／投稿文件），讓作者
+一眼看出哪些今天就能做完。
+
+真實審稿意見回來時，把 `text` 換成期刊寄來的原文**逐字**貼上，其餘結構沿用。
 
 ---
 

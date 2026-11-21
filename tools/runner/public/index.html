@@ -182,7 +182,7 @@ textarea.prompt{font-family:var(--mono);font-size:12px;line-height:1.65;min-heig
   <aside class="rail">
     <div>
       <div class="brand"><span class="dot"></span>醫學論文評析工作台</div>
-      <div class="flow"><b>A</b> 剖析 → <b>B</b> 文獻 → <b>C</b> 圖檔 → <b>D</b> 評析 → <b>E</b> 審稿<br>→ <b>F</b> 修改 ⇄ <b>G</b> 把關（最多 3 輪）→ 投稿</div>
+      <div class="flow"><b>A</b> 剖析 → <b>B</b> 文獻 → <b>C</b> 圖檔 → <b>D</b> 評析 → <b>E</b> 審稿<br>→ <b>F</b> 修改 ⇄ <b>G</b> 把關（最多 3 輪）→ <b>H</b> 回覆信 → 投稿</div>
     </div>
     <div style="display:grid;gap:9px">
       <div class="railsec">論文</div>
@@ -322,6 +322,28 @@ panel 標示、字級、解析度、誤差線定義、每組 n、統計標記是
 
 把分數下降的那一版當成成果交出去，比不修改更糟。
 重審必須是獨立 subagent——自己改的稿件自己重審，分數幾乎一定上升，閘門就沒意義了。`},
+ {n:'H',key:'response',name:'回覆信',
+  desc:'把所有輪次的審稿意見去重，產出 point-by-point 回覆範本（docx + md）。',
+  prompt:`[STAGE H 回覆信]
+請執行 pipeline.md 的 Stage H。
+
+每進入一個步驟，先單獨印一行 [STEP]。
+
+1. 把所有輪次的審稿意見（05_panel.md 與各輪 review_v*.json、重審報告）整理成
+   response_data.json，schema 見 scripts/make_response_template.py 的 docstring
+2. **去重並標出重複次數**：issue_map 每列一個議題，寫明哪幾條提出、在幾輪裡被獨立提出過。
+   被每一輪都點到的議題就是編輯真正會看的那幾條
+3. 同一議題只在 answer_in 指定的位置寫完整回覆，其他位置交叉引用
+4. 每一條都要分成三塊：
+   - draft：已經可以用的英文草稿
+   - todo：只有我能決定或要回查原始資料的事
+   - fallback：如果那個實驗做不了，守得住的說法是什麼
+5. checklist 依工作量分組（零成本／回查紀錄簿／重新分析／新實驗／投稿文件）
+6. 跑 scripts/make_response_template.py 產出
+   06_response_to_reviewers.docx 與 .md
+
+fallback 那一欄不要省——退一步的說法要事先想好，不是在 deadline 前一天想。
+回覆正文用英文，給我的指示用繁體中文。`},
 ];
 const PERMS=[
  ['acceptEdits','acceptEdits — 自動接受檔案編輯，其餘仍會詢問'],

@@ -24,13 +24,13 @@ criticism that co-authors are usually too polite to give.
 
 ## Two ways to work
 
-**The staged pipeline (A-G)** — read `references/pipeline.md`. Adapted from
+**The staged pipeline (A-H)** — read `references/pipeline.md`. Adapted from
 google-research/paper-orchestra: profile → PubMed literature → figure audit →
 appraisal → reviewer panel → revise the .docx with tracked changes → an
 independent re-review that scores the round and reverts it if it did not
-improve. Use this when the user wants the manuscript actually revised, not
-just critiqued, and when they are driving it from the local runner in
-`tools/runner/`.
+improve → a point-by-point response letter. Use this when the user wants the
+manuscript actually revised, not just critiqued, and when they are driving it
+from the local runner in `tools/runner/`.
 
 **A single service on its own** — the table below. Use this when the user asks
 for one thing ("just the reviewer comments", "reformat for this journal").
@@ -191,6 +191,7 @@ Pipeline runs use the stage names and outputs in `references/pipeline.md` instea
 | `extract_references.py` | the reference list → a structured worklist for PubMed verification |
 | `revise_docx.py` | an edits JSON → a .docx with real tracked changes and Word comments |
 | `refine_gate.py` | two review JSONs → ACCEPT or REVERT for a revision round |
+| `finish_round.py` | carries the verdict out on disk — keeps the round or moves it to `reverted/` |
 | `make_response_template.py` | reviewer comments → a point-by-point response .docx |
 
 For .docx output with tracked changes, use the `docx` skill if one is available in the
