@@ -314,9 +314,11 @@ panel 標示、字級、解析度、誤差線定義、每組 n、統計標記是
    只給它改後的稿件。產出 review_v1.json
 2. 跑 scripts/refine_gate.py review_v0.json review_v1.json --round 1 \
       --worklog refinement/worklog.json
-3. exit 0（ACCEPT）→ 保留這一輪，告訴我要不要進下一輪
-   exit 1（REVERT）→ **真的回退**：把 manuscript_r1.docx 擱置，
-   回到上一版，並說明哪一輪被回退、為什麼
+3. 依判定實際搬檔案，不要只印結論：
+   scripts/finish_round.py --round 1 --dir . --verdict ACCEPT 或 REVERT
+   ACCEPT → 這一輪成為 manuscript_current.docx
+   REVERT → 移到 reverted/round-1/，current 回到上一版
+4. 告訴我判定、各軸分數變化，以及要不要進下一輪
 
 把分數下降的那一版當成成果交出去，比不修改更糟。
 重審必須是獨立 subagent——自己改的稿件自己重審，分數幾乎一定上升，閘門就沒意義了。`},
