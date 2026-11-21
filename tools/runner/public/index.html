@@ -374,13 +374,28 @@ function md2html(src){
   return out;
 }
 
+const slug=n=>String(n||'').trim().replace(/\s+/g,'_').replace(/[^\w\u4e00-\u9fff.-]/g,'');
 const projOf=id=>S.projects.find(p=>p.id===id);
+const projBySlug=sl=>S.projects.find(p=>slug(p.name)===sl);
+function syncHash(){
+  const p=projOf(sel); if(!p) return;
+  const want='#'+slug(p.name);
+  if(location.hash!==want){ history.replaceState(null,'',want) }
+}
+function selectFromHash(){
+  const sl=decodeURIComponent(location.hash.replace(/^#/,''));
+  if(!sl) return false;
+  const p=projBySlug(sl);
+  if(p && p.id!==sel){ sel=p.id; logRun=null; outFiles=null; outSel=null; outText=null; outFor=null; return true }
+  return false;
+}
 const runningFor=id=>S.running.find(r=>r.projectId===id);
 const fmtDur=ms=>{const s=Math.floor(ms/1000);return `${Math.floor(s/60)} 分 ${s%60} 秒`};
 
 async function refresh(){
   try{ const j=await api('/api/state'); S=j;
     if(!sel||!projOf(sel)) sel=S.projects[0]?.id||null;
+    selectFromHash(); syncHash();
     $('#srvnote').textContent=`伺服器 ${location.host}　資料：${S.projects.length} 篇`;
   }catch(e){ err=e.message }
   paint();
@@ -398,7 +413,7 @@ function paintRail(){
     s.append(document.createTextNode((p.journal||'未指定期刊')+' · '));
     s.append(r?Object.assign(el('span','live'),{textContent:'執行中：'+r.serviceName}):el('span',null,'閒置'));
     b.append(s);
-    b.onclick=()=>{sel=p.id;logRun=null;outFiles=null;outSel=null;outText=null;outFor=null;paint()};
+    b.onclick=()=>{sel=p.id;logRun=null;outFiles=null;outSel=null;outText=null;outFor=null;syncHash();paint()};
     h.append(b);
   });
   const e=$('#envlist'); e.innerHTML='';
@@ -797,7 +812,7 @@ function newProjectCard(first){
     try{ const j=await api('/api/projects',{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({dir:dir.value.trim(),name:name.value.trim()||undefined,
         journal:jr.value.trim(),type:ty.value.trim()||'Original article'})});
-      sel=j.project.id;tab='s3';await refresh();
+      sel=j.project.id;tab='sA';await refresh();syncHash();
     }catch(e){err=e.message;add.disabled=false;paint()}
   };
   row.append(add);c.append(row);
@@ -836,6 +851,7 @@ function settingsCard(p){
   return c;
 }
 
+window.addEventListener('hashchange',()=>{ if(selectFromHash()) paint() });
 refresh();
 api('/api/env').then(j=>{ENV=j.env||[];paintRail()}).catch(()=>{});
 setInterval(()=>{ if(!document.hidden) refresh() },5000);
